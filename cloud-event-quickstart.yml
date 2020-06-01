@@ -1,0 +1,132 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: examples
+  namespace: pinot-quickstart
+data:
+  cloudevent_schema.json: |-
+    {
+      "schemaName": "cloudevents",
+      "dimensionFieldSpecs": [
+        {
+          "name": "specVersion",
+          "dataType": "STRING"
+        },
+        {
+          "name": "source",
+          "dataType": "STRING"
+        },
+        {
+          "name": "id",
+          "dataType": "STRING"
+        },
+        {
+          "name": "datacontenttype",
+          "dataType": "STRING"
+        },
+        {
+          "name": "type",
+          "dataType": "STRING"
+        }
+      ],
+      "metricFieldSpecs": [
+
+      ],
+      "timeFieldSpec": {
+        "incomingGranularitySpec": {
+          "name": "timestamp",
+          "dataType": "LONG",
+          "timeFormat" : "EPOCH",
+          "timeType": "MILLISECONDS"
+        },
+        "outgoingGranularitySpec": {
+          "dataType": "LONG",
+          "timeType": "SECONDS",
+          "name": "SecondsSinceEpoch"
+        }
+      }
+    }
+
+  cloudevent_table_config.json: |-
+    {
+      "tableName": "cloudevent_table",
+      "tableType": "REALTIME",
+      "segmentsConfig": {
+        "timeColumnName": "timestamp",
+        "timeType": "MILLISECONDS",
+        "schemaName": "cloudevents",
+        "replicasPerPartition": "1"
+      },
+      "tenants": {},
+      "fieldConfigList":[
+          {
+            "name":"type",
+            "encodingType":"RAW",
+            "indexType":"TEXT"
+          }
+      ],
+      "tableIndexConfig": {
+        "noDictionaryColumns": [
+          "type"
+        ],
+        "loadMode": "MMAP",
+        "streamConfigs": {
+          "streamType": "kafka",
+          "stream.kafka.consumer.type": "simple",
+          "stream.kafka.topic.name": "cloudevent-topic",
+          "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.stream.kafka.KafkaJSONMessageDecoder",
+          "stream.kafka.consumer.factory.class.name": "org.apache.pinot.plugin.stream.kafka20.KafkaConsumerFactory",
+          "stream.kafka.broker.list": "PLAINTEXT://kafka:9092",
+          "realtime.segment.flush.threshold.time": "12h",
+          "realtime.segment.flush.threshold.size": "50000",
+          "stream.kafka.consumer.prop.auto.offset.reset": "smallest"
+        }
+      },
+      "metadata": {
+        "customConfigs": {}
+      }
+    }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pinot-cloudevent-getting-started
+  namespace: pinot-quickstart
+spec:
+  template:
+    spec:
+      containers:
+        - name: pinot-add-example-realtime-table-json
+          image: apachepinot/pinot:latest
+          args: [ "AddTable", "-schemaFile", "/var/pinot/examples/cloudevent_schema.json", "-tableConfigFile", "/var/pinot/examples/cloudevent_table_config.json", "-controllerHost", "pinot-controller", "-controllerPort", "9000", "-exec" ]
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms4G -Xmx4G -Dpinot.admin.system.exit=true"
+          volumeMounts:
+            - name: examples
+              mountPath: /var/pinot/examples
+      restartPolicy: OnFailure
+      volumes:
+        - name: examples
+          configMap:
+            name: examples
+  backoffLimit: 100

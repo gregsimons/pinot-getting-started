@@ -1,0 +1,41 @@
+{
+  "schemaName": "cloudevents",
+  "dimensionFieldSpecs": [
+    {
+      "name": "specVersion",
+      "dataType": "STRING"
+    },
+    {
+      "name": "source",
+      "dataType": "STRING"
+    },
+    {
+      "name": "id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "datacontenttype",
+      "dataType": "STRING"
+    },
+    {
+      "name": "type",
+      "dataType": "STRING"
+    }
+  ],
+  "metricFieldSpecs": [
+
+  ],
+  "timeFieldSpec": {
+    "incomingGranularitySpec": {
+      "name": "timestamp",
+      "dataType": "LONG",
+      "timeFormat" : "EPOCH",
+      "timeType": "MILLISECONDS"
+    },
+    "outgoingGranularitySpec": {
+      "dataType": "LONG",
+      "timeType": "SECONDS",
+      "name": "SecondsSinceEpoch"
+    }
+  }
+}
